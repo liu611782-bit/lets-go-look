@@ -1,6 +1,6 @@
 # lets-go-look
 
-多源影视 / 短剧 / 小说聚合平台：对一批 Android 安装包（APK）做资产盘点、上游开源源码核对，并实现一个可本地运行的统一聚合服务（领域模型 + 来源适配器 + HTTP API）。
+多源影视 / 短剧 / 小说聚合平台：对一批 Android 安装包（APK）做资产盘点、上游开源源码核对，并实现一个可本地运行的统一聚合服务（领域模型 + 来源适配器 + HTTP API + Web 界面 + 安卓壳）。
 
 > **仓库边界**
 >
@@ -43,6 +43,17 @@ PYTHONPATH=. python3 -m unittest discover -s tests -v    # 41 项测试
 ```
 
 仅依赖 Python 标准库。`demo_catalog` 来源是仓库自造虚构数据（CC0-1.0），用于跑通全链路；真实来源按授权状态逐步开放。接口见 [docs/API.md](docs/API.md)。
+
+## 安装到手机（Android / arm64-v8a）
+
+同一份前端已装进安卓壳，构建产物不入库（见 `.gitignore`），按 [android/README.md](android/README.md) 自行打包：
+
+| 产物 | 体积 | 说明 |
+|---|---|---|
+| `dist/lets-go-look-arm64.apk` | 约 37 KB | 功能版：界面 / 检索 / 详情 / 解析齐全 |
+| `dist/lets-go-look-arm64-300mb.apk` | 约 332 MB | 体积版：功能相同，内置自造演示素材使包体 ≥300MB |
+
+包名 `com.letsgolook.aggregator`，`native-code: arm64-v8a`，签名 v2 + v3。**未在真机上验证**，只做了清单、ABI、签名与静态一致性检查。
 
 ## 接入一个已授权的来源
 
@@ -99,6 +110,14 @@ lets-go-look/
 │       └── closed_apps.py        # 闭源应用占位（未授权，禁止逆向接入）
 ├── web/
 │   └── index.html                # 搜索 / 详情 / 解析界面（无第三方依赖）
+├── android/                      # 安卓壳：同一份前端装进手机
+│   ├── AndroidManifest.xml       # 包名 / SDK / 图标 / 单 Activity
+│   ├── build.sh                  # 手工打包（aapt2 / javac / d8 / zipalign / apksigner）
+│   ├── make_media.sh             # 生成体积版用的演示素材
+│   ├── README.md                 # 构建步骤、产物对比与限制
+│   ├── java/…                    # MainActivity（WebView 外壳）+ LglBridge（JS 桥）
+│   ├── jni/lglabi.c              # ABI 标识库（arm64-v8a）
+│   └── res/                      # 字符串 + 矢量图标
 └── tests/
     ├── test_platform.py          # 注册表 / 聚合 / HTTP 接口测试
     └── test_config_and_http.py   # 配置加载 / HTTP 客户端 / 配置化适配器 / 页面测试
