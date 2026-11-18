@@ -15,9 +15,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from platform.adapters.base import SourceAdapter
+from platform.bootstrap import default_registry
 from platform.errors import BadRequest, SourceDisabled, normalize_exception
 from platform.models import MediaItem, MediaType, ResolvedSource, SourceStatus
-from platform.registry import Registry, default_registry
+from platform.registry import Registry
 from platform.serialization import (
     chapter_to_dict,
     episode_to_dict,
@@ -132,7 +133,7 @@ class SearchOutcome:
 # ---------------------------------------------------------------- 去重与排序
 
 
-_TITLE_NOISE = set(" \t\r\n\u3000·•－—_-:：,，.。!！?？'\u201c\u201d\u2018\u2019()（）[]【】/\\|、；;“”‘’")
+_TITLE_NOISE = set(" \t\r\n\u3000·•－—_-:：,，.。!！?？'\u201c\u201d\u2018\u2019()（）[]【】/\\|、；;\“\u201d\u2018\u2019")
 
 
 def normalize_title(title: str) -> str:
@@ -195,7 +196,7 @@ class Aggregator:
         if media_type is not None and not isinstance(media_type, MediaType):
             raise BadRequest(f"不支持的 media_type：{media_type}")
 
-        cache_key = f"search|{query.strip()}|{media_type}|{page}|{','.join(sorted(sources or ()))}"
+        cache_key = f"search|{query.strip()}|{media_type}|{page}|{','.join(sorted(sources or ())}"
         cached = self.cache.get(cache_key)
         if cached is not None:
             return cached
