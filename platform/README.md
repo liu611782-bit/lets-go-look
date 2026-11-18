@@ -10,15 +10,21 @@ platform/
 ├── models.py              # 统一领域模型（MediaItem / Episode / Chapter / ResolvedSource ...）
 ├── errors.py              # 统一错误码与异常归一
 ├── registry.py            # 适配器注册表 + 实例缓存 + 状态筛选
+├── bootstrap.py           # 装配：内置源 + 配置化来源
 ├── aggregator.py          # 多源合并、跨源去重、排序、TTL 缓存、错误降级
 ├── serialization.py       # 领域模型 → JSON
-├── server.py              # HTTP API（http.server，无第三方依赖）
+├── config.py              # 来源配置加载（凭证只存环境变量名）
+├── http_client.py         # 统一 HTTP 客户端（白名单 / 超时 / 重试 / 限流）
+├── server.py              # HTTP API + 界面路由
 ├── cli.py                 # 命令行：sources / health / search / detail / resolve / serve
+├── config/
+│   └── sources.example.json  # 接入配置示例（默认关闭、占位域名）
 ├── data/
 │   └── demo_catalog.json  # 自造虚构演示目录（CC0-1.0）
 └── adapters/
     ├── base.py            # SourceAdapter 抽象契约
     ├── demo_catalog.py    # 演示目录（ACTIVE，本地 JSON，无网络请求）
+    ├── http_source.py     # 配置驱动的通用 HTTP 适配器
     ├── aquan_duanju.py    # 阿圈短剧（Apache-2.0 上游，骨架）
     ├── iduanju.py         # i短剧（GPL-3.0 上游，骨架）
     ├── fanqie_novel.py    # 番茄小说下载器（许可证待确认，骨架）
@@ -29,13 +35,25 @@ platform/
 ## 快速运行
 
 ```bash
-PYTHONPATH=. python3 -m platform.cli health           # 来源健康状态
-PYTHONPATH=. python3 -m platform.cli search 雾         # 多源检索
-PYTHONPATH=. python3 -m platform.cli serve --port 8080
-PYTHONPATH=. python3 -m unittest discover -s tests -v # 22 项测试
+PYTHONPATH=. python3 -m platform.cli serve --port 8080  # 打开 http://127.0.0.1:8080
+PYTHONPATH=. python3 -m platform.cli health             # 来源健康状态
+PYTHONPATH=. python3 -m platform.cli search 雾           # 多源检索
+PYTHONPATH=. python3 -m unittest discover -s tests -v   # 41 项测试
 ```
 
-接口细节见 [`../docs/API.md`](../docs/API.md)。
+接口细节见 [`../docs/API.md`](../docs/API.md)，界面文件是 [`../web/index.html`](../web/index.html)。
+
+## 接入已授权来源（配置驱动）
+
+```bash
+cp platform/config/sources.example.json ~/my-sources.json
+# 填 base_url / endpoints / fields，enabled=true
+LGL_SOURCES_CONFIG=~/my-sources.json PYTHONPATH=. python3 -m platform.cli sources
+```
+
+- 代码里不硬编码任何上游地址；域名自动进白名单，白名单外的请求直接拒绝；
+- 只支持 GET，带最小请求间隔与有限重试，不做批量并发抓取；
+- 令牌只通过 `auth_env` / `headers_env` 从环境变量注入，配置文件与仓库里都不留凭证。
 
 ## 适配器状态
 
@@ -48,6 +66,7 @@ PYTHONPATH=. python3 -m unittest discover -s tests -v # 22 项测试
 | `zhenguojian` | 真果鉴 | STUB | 主线 GPL-3.0，家族镜像无 LICENSE，需先复核 |
 | `xiaoguo_video` | 小果影视 | DISABLED | 闭源，未授权，禁止逆向接入 |
 | `biquge_reader` | 笔趣阁 | DISABLED | 闭源 / 疑似重打包，禁止复用签名绕过逻辑 |
+| 配置中的来源 | 由 `sources.json` 定义 | ACTIVE / STUB | `enabled=true` 且配好 search+detail 即 ACTIVE，否则 STUB |
 
 ## 用代码调用
 
@@ -62,13 +81,23 @@ detail = agg.detail("demo_catalog", "demo-drama-001")
 print(detail["episodes"][0]["title"])
 ```
 
-注册新来源：
+注册新来源（注册表实例的默认装配在 `platform.bootstrap`）：
 
 ```python
-from platform.registry import default_registry
+from platform.bootstrap import default_registry
 from platform.adapters.aquan_duanju import AquanDuanjuAdapter
 
 default_registry.register("aquan_duanju_v2", AquanDuanjuAdapter)
+```
+
+也可以直接用配置注册一个 HTTP 来源（无需写适配器）：
+
+```python
+from platform.bootstrap import register_configured, create_registry
+from platform.config import parse_source
+
+sources = {"my_src": parse_source({"adapter_id": "my_src", "base_url": "https://api.example.com", "endpoints": {"search": "v1/search", "detail": "v1/detail/{id}"}})}
+registry = register_configured(create_registry(), sources)
 ```
 
 ## 实现约定
@@ -81,8 +110,8 @@ default_registry.register("aquan_duanju_v2", AquanDuanjuAdapter)
 
 ## 下一步
 
-1. 选许可证清晰、接口公开的来源（`aquan_duanju`）打通真实 `search → detail → resolve`，替换骨架实现。
-2. 增加统一 HTTP 客户端（超时、重试、限流、UA 策略）与按来源的频次配置。
+1. 拿到某个来源的接口文档与授权后，用配置文件接入，先跑通 `search → detail`，再补 `resolve`。
+2. 按来源补频次配置与错误分类统计（`/health` 扩展为耗时 / 成功率面板）。
 3. 补书架 / 进度 / 历史（存本地或用户自有账号，不做跨源画像）。
 4. 其余来源按授权与许可证状态逐个开放；DISABLED 来源在授权前不得实现业务方法。
 

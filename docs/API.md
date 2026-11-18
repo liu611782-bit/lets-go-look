@@ -21,12 +21,15 @@ PYTHONPATH=. python3 -m platform.cli search 雾 --type drama
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/` | 服务导航页（HTML） |
+| GET | `/` | 界面：搜索、详情、分集 / 章节与解析（HTML） |
+| GET | `/ui` | 同上（别名） |
 | GET | `/health` | 服务状态 + 各来源状态汇总 |
 | GET | `/sources` | 来源清单：adapter_id、支持类型、许可证、接入状态 |
 | GET | `/search` | 多源检索，跨源合并去重后分页返回 |
 | GET | `/detail` | 取详情 + 分集 / 分章节 |
 | GET | `/resolve` | 解析播放 / 阅读地址 |
+
+界面由 `web/index.html` 提供（单文件、无第三方依赖、移动端优先）。若该文件缺失，`/` 会退回一个 API 导航页。
 
 ### `/search`
 
@@ -40,7 +43,7 @@ PYTHONPATH=. python3 -m platform.cli search 雾 --type drama
 响应要点：
 
 - `items[]` 每条是**跨源聚合后的作品**，`sources[]` 列出命中该作品的所有来源，`source_count` 为来源数；
-- 主项取评分最高的来源，其字段直接展开在 `items[]` 元素上；
+- 主项（`primary`）取评分最高的来源，其字段直接展开在 `items[]` 元素上；
 - `per_source[]` 给出每个来源的 `count` 与 `error`，单个来源失败不会影响整体结果；
 - `degraded=true` 表示至少一个来源未返回数据（骨架来源会返回 `SOURCE_NOT_READY`）。
 
@@ -127,3 +130,26 @@ PYTHONPATH=. python3 -m platform.cli search 雾 --type drama
 ## 5. 演示数据
 
 `demo_catalog` 适配器读取 `platform/data/demo_catalog.json`，全部为仓库自造虚构条目（CC0-1.0），用于验证 `search → detail → resolve` 主链路。其 `resolve` 返回 `https://example.com/...` 占位地址，**不指向任何真实内容**。接入真实来源后应替换为上游授权地址。
+
+## 6. 配置化来源接入
+
+已取得接口文档与授权的来源，可以直接用配置上线，无需改代码。
+
+1. 复制 `platform/config/sources.example.json` 到仓库外；
+2. 修改 `base_url`、`endpoints`、`fields`；
+3. 用 `LGL_SOURCES_CONFIG` 指向该文件（或用默认路径 `platform/config/sources.json`，该文件已被 `.gitignore` 排除）；
+4. `enabled` 置 `true` 后生效。
+
+配置字段：
+
+| 字段 | 说明 |
+|---|---|
+| `base_url` | 已授权的接口根地址；其主机自动进入 HTTP 客户端白名单 |
+| `endpoints` | `search` / `detail` / `episodes` / `chapters` / `resolve`，路径支持 `{query}` `{page}` `{id}` `{episode}` 占位符，仅允许 GET |
+| `fields` | 响应字段的取值路径（点路径），如 `title`、`id`、`rating`、`detail_item_path` |
+| `search_items_path` / `episodes_path` / `chapters_path` / `resolve_url_field` | 数组与地址在响应中的位置 |
+| `enabled` | `false` 时来源为 STUB（可见但不参与真实调用） |
+| `auth_env` / `headers_env` | 存放令牌的环境变量名，配置文件里不写凭证 |
+| `timeout_seconds` / `max_retries` / `min_interval_seconds` | 单源超时、重试次数、最小请求间隔 |
+
+约束：只有 `search` + `detail` 都配好且 `enabled=true` 时来源才是 ACTIVE；缺 `resolve` 时会正常检索但解析返回 `SOURCE_NOT_READY`。域名不在白名单时直接拒绝，不会发出请求。
