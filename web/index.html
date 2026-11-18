@@ -136,6 +136,7 @@
     <button id="go">搜索</button>
   </div>
   <div class="hint">当前可用数据来自仓库自造的演示目录（虚构内容）；已接入但未授权的来源会显示为「未就绪」。</div>
+  <div id="media-entry" style="display:none;margin:0 2px 14px"></div>
 
   <div id="notice"></div>
   <div id="results" class="grid"></div>
@@ -155,7 +156,33 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
 
 const typeLabel = { drama: "短剧", video: "影视", novel: "小说", comic: "漫画" };
 
+function nativeApi(path) {
+  const split = path.split("?");
+  const route = split[0].replace(/^\//, "");
+  const params = new URLSearchParams(split[1] || "");
+  const raw = window.LGLNative.request(
+    route,
+    params.get("q") || "",
+    params.get("type") || "",
+    params.get("page") || "1",
+    params.get("sources") || "",
+    params.get("source") || "",
+    params.get("id") || "",
+    params.get("episode") || params.get("chapter") || ""
+  );
+  const data = JSON.parse(raw);
+  if (data && data.error) {
+    const e = new Error(data.error.message || "请求失败");
+    e.code = data.error.code || "INTERNAL_ERROR";
+    throw e;
+  }
+  return data;
+}
+
 async function api(path) {
+  if (window.LGLNative && window.LGLNative.request) {
+    return nativeApi(path);
+  }
   const res = await fetch(path, { headers: { Accept: "application/json" } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -321,7 +348,37 @@ document.getElementById("mask").addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.getElementById("mask").classList.remove("open"); });
 
+/* 体积版包内自带演示素材时，给一个真正能播放的入口；功能版没有该文件则不显示。 */
+function initMediaEntry() {
+  const box = document.getElementById("media-entry");
+  const native = window.LGLNative;
+  if (!box || !native || !native.hasDemoMedia) return;
+  let has = false;
+  try { has = native.hasDemoMedia() === "1"; } catch (e) { has = false; }
+  if (!has) return;
+
+  box.style.display = "block";
+  box.innerHTML = '<button class="ghost" id="play-demo">播放内置演示素材（1080p60，自造画面）</button>';
+  document.getElementById("play-demo").onclick = () => {
+    const mask = document.getElementById("mask");
+    const sheet = document.getElementById("sheet");
+    sheet.innerHTML = '<button class="close" id="close">×</button>'
+      + '<h2>内置演示素材</h2>'
+      + '<div class="tag">ffmpeg 合成的测试画面（CC0），用于验证体积版的安装与播放链路；不含任何真实作品。</div>'
+      + '<video controls playsinline preload="metadata" style="width:100%;margin-top:12px;border-radius:12px;background:#000" '
+      + 'src="file:///android_asset/demo_media/pressure_test_1080p60.mp4"></video>';
+    mask.classList.add("open");
+    sheet.querySelector("#close").onclick = () => {
+      const video = sheet.querySelector("video");
+      if (video) video.pause();
+      sheet.innerHTML = "";
+      mask.classList.remove("open");
+    };
+  };
+}
+
 loadHealth();
+initMediaEntry();
 doSearch();
 </script>
 </body>
