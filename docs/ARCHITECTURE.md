@@ -7,11 +7,15 @@
 | 领域模型 | 已实现 | `platform/models.py` |
 | 错误码与异常归一 | 已实现 | `platform/errors.py` |
 | 适配器注册表 | 已实现 | `platform/registry.py` |
+| 平台装配（内置源 + 配置化来源） | 已实现 | `platform/bootstrap.py` |
+| 来源配置加载 | 已实现 | `platform/config.py`、`platform/config/sources.example.json` |
+| 统一 HTTP 客户端（白名单 / 超时 / 重试 / 限流） | 已实现 | `platform/http_client.py` |
 | 聚合服务（合并 / 去重 / 排序 / 降级 / 缓存） | 已实现 | `platform/aggregator.py` |
 | HTTP API | 已实现（标准库） | `platform/server.py`，契约见 [API.md](API.md) |
+| 前端界面 | 已实现（单文件、无依赖） | `web/index.html` |
 | CLI | 已实现 | `platform/cli.py` |
-| 适配器 | 1 个 ACTIVE（演示数据）+ 4 个 STUB + 2 个 DISABLED | `platform/adapters/` |
-| 真实上游对接 | 待授权 / 待接口确认 | 见第 5 节 |
+| 适配器 | 1 个 ACTIVE（演示数据）+ 4 个 STUB + 2 个 DISABLED + 可配置来源 | `platform/adapters/` |
+| 真实上游对接 | 待授权 / 待接口文档 | 拿到后走配置文件即可上线 |
 
 ## 1. 目标与边界
 
@@ -80,6 +84,34 @@
 - 解析失败、需要登录、地区受限、内容下架等情况，用统一错误码返回，不抛出上游原始堆栈。
 - 适配器以异常表达状态：`PermissionError` → `SOURCE_DISABLED`，`NotImplementedError` → `SOURCE_NOT_READY`，其余 → `UPSTREAM_ERROR`。
 
+## 4.1 HTTP 客户端与配置装配
+
+**为什么不把接口地址写进代码**：不同来源的接口结构、字段名、分页方式差异很大，硬编码会让每接一个源就改一次代码；更关键的是，接口地址本身属于「授权范围内」的信息，不该出现在公开仓库里。
+
+```
+platform/config/sources.example.json  ──(复制到仓库外)──▶  ~/my-sources.json
+                                                            │ LGL_SOURCES_CONFIG
+                                                            ▼
+                                              platform/config.py（解析 + 校验）
+                                                            │
+                                              platform/bootstrap.py
+                                                  ├── 内置适配器（demo / 开源骨架 / 闭源占位）
+                                                  └── ConfiguredHttpAdapter（每个配置项一个）
+                                                            │
+                                              platform/http_client.py
+                                                  · 域名白名单（配置里的 host）
+                                                  · 仅 GET、超时、有限重试、最小间隔
+                                                            │
+                                                        上游授权接口
+```
+
+约束：
+
+- 白名单外的域名直接抛 `SOURCE_DISABLED`，请求不会发出；
+- 只允许 `GET`，配置里写 `POST` 会在加载时报错；
+- 令牌只通过环境变量注入（`auth_env` / `headers_env`），`platform/config/sources.json` 被 `.gitignore` 排除；
+- 缺端点时抛 `SOURCE_NOT_READY`，不做「猜接口」式的兜底。
+
 ## 5. 来源接入状态
 
 | 适配器 | 对应 APK | 上游状态 | 平台接入策略 |
@@ -103,6 +135,7 @@
 1. ~~固化领域模型与适配器接口~~（已完成，`platform/models.py`、`adapters/base.py`）。
 2. ~~打通 `search → detail → resolve` 主链路并给出统一 API~~（已完成，以 `demo_catalog` 验证，契约见 [API.md](API.md)）。
 3. ~~接入聚合服务的多源合并、去重、统一错误处理与降级~~（已完成，`platform/aggregator.py`、`errors.py`）。
-4. 选许可证清晰的来源（`aquan_duanju`）对接真实公开接口，替换骨架实现。
-5. 其余来源按授权与许可证状态逐个开放；闭源来源在授权前保持禁用。
-6. 补书架 / 进度 / 历史与前端接入。
+4. ~~前端界面与配置驱动的 HTTP 接入通道~~（已完成，`web/index.html`、`platform/config.py`、`platform/http_client.py`、`platform/adapters/http_source.py`）。
+5. 选许可证清晰的来源（`aquan_duanju`）对接真实公开接口，替换骨架实现。
+6. 其余来源按授权与许可证状态逐个开放；闭源来源在授权前保持禁用。
+7. 补书架 / 进度 / 历史与多端接入。
