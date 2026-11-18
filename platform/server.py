@@ -1,6 +1,8 @@
 """统一聚合服务的最小 HTTP 接口（标准库实现，无第三方依赖）。
 
 端点：
+  GET /                     前端页面（web/index.html）
+  GET /ui                   同上（别名）
   GET /health
   GET /sources
   GET /search?q=关键词&type=drama|video|novel|comic&page=1&sources=a,b
@@ -15,6 +17,7 @@ from __future__ import annotations
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs, urlparse
 
@@ -26,6 +29,8 @@ from platform.errors import (
     PlatformError,
 )
 from platform.models import MediaType
+
+WEB_INDEX = Path(__file__).resolve().parent.parent / "web" / "index.html"
 
 HTTP_BY_CODE: Dict[ErrorCode, int] = {
     ErrorCode.BAD_REQUEST: HTTPStatus.BAD_REQUEST,
@@ -46,8 +51,8 @@ INDEX_HTML = """<!doctype html>
 <li><a href="/health">/health</a> — 服务与各来源状态</li>
 <li><a href="/sources">/sources</a> — 来源清单与许可证</li>
 <li><a href="/search?q=雾">/search?q=雾</a> — 多源检索</li>
-<li><a href="/detail?source=demo_catalog&amp;id=demo-drama-001">/detail</a> — 详情与分集</li>
-<li><a href="/resolve?source=demo_catalog&amp;id=demo-drama-001&amp;episode=ep-1">/resolve</a> — 解析（演示占位地址）</li>
+<li><a href="/detail?source=demo_catalog&id=demo-drama-001">/detail</a> — 详情与分集</li>
+<li><a href="/resolve?source=demo_catalog&id=demo-drama-001&episode=ep-1">/resolve</a> — 解析（演示占位地址）</li>
 </ul>
 <p>未授权来源（DISABLED）不发起任何请求；STUB 来源返回 SOURCE_NOT_READY。</p>
 </body></html>
@@ -90,6 +95,13 @@ class Handler(BaseHTTPRequestHandler):
         values = params.get(name) or []
         return values[0].strip() if values and values[0].strip() else None
 
+    def _send_web(self) -> None:
+        """返回 web/index.html；文件缺失时退回 API 导航页。"""
+        if WEB_INDEX.exists():
+            self._send_html(HTTPStatus.OK, WEB_INDEX.read_text(encoding="utf-8"))
+        else:
+            self._send_html(HTTPStatus.OK, INDEX_HTML)
+
     # ---- 路由 -------------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802 — 标准库约定
@@ -98,7 +110,10 @@ class Handler(BaseHTTPRequestHandler):
         params = parse_qs(parsed.query, keep_blank_values=False)
         try:
             if route == "/":
-                self._send_html(HTTPStatus.OK, INDEX_HTML)
+                self._send_web()
+                return
+            if route == "/ui":
+                self._send_web()
                 return
             if route == "/health":
                 self._send(HTTPStatus.OK, self.aggregator.health())
