@@ -1,4 +1,17 @@
-# 统一聚合平台架构（骨架）
+# 统一聚合平台架构
+
+## 0. 当前实现状态
+
+| 层 | 状态 | 位置 |
+|---|---|---|
+| 领域模型 | 已实现 | `platform/models.py` |
+| 错误码与异常归一 | 已实现 | `platform/errors.py` |
+| 适配器注册表 | 已实现 | `platform/registry.py` |
+| 聚合服务（合并 / 去重 / 排序 / 降级 / 缓存） | 已实现 | `platform/aggregator.py` |
+| HTTP API | 已实现（标准库） | `platform/server.py`，契约见 [API.md](API.md) |
+| CLI | 已实现 | `platform/cli.py` |
+| 适配器 | 1 个 ACTIVE（演示数据）+ 4 个 STUB + 2 个 DISABLED | `platform/adapters/` |
+| 真实上游对接 | 待授权 / 待接口确认 | 见第 5 节 |
 
 ## 1. 目标与边界
 
@@ -16,21 +29,23 @@
 ┌──────────────────────────────────────────────────────────┐
 │  接入端：Web / App / TV 前端（统一搜索、书架、播放阅读页）  │
 └───────────────────────────────┬──────────────────────────┘
-                                │  统一 REST / GraphQL
+                                │  统一 REST（已实现，见 API.md）
 ┌───────────────────────────────▼──────────────────────────┐
-│  聚合服务 Aggregator Service                               │
-│  · 多源结果合并、去重、排序 · 书架 / 进度 / 历史（本地账号）│
-│  · 缓存、限流、日志、错误兜底                              │
+│  聚合服务 Aggregator（platform/aggregator.py）             │
+│  · 多源结果合并、跨源去重、排序 · 逐源隔离与错误降级        │
+│  · TTL 缓存 · 统一错误码                                   │
+│  · 待补：书架 / 进度 / 历史、限流、指标                     │
 └───────────────────────────────┬──────────────────────────┘
                                 │  SourceAdapter 接口
 ┌───────────────────────────────▼──────────────────────────┐
 │  适配器层 Adapters                                          │
-│  aquan_duanju │ iduanju │ fanqie_novel │ closed(占位禁用) │
+│  demo_catalog(ACTIVE) │ aquan │ iduanju │ fanqie │ 真果鉴   │
+│  closed_apps: 小果影视 / 笔趣阁（DISABLED，不发请求）        │
 └───────────────┬───────────────┬───────────────┬──────────┘
-                │ HTTPS           │ HTTPS         │ HTTPS
+                │ HTTPS           │ HTTPS         │ 不发起请求
         ┌───────▼──────┐  ┌──────▼───────┐  ┌────▼─────────┐
-        │ 上游后端 API  │  │ 上游后端 API  │  │ 上游后端 API │
-        │ (公开/已授权) │  │ (公开/已授权) │  │ (待授权/禁用)│
+        │ 上游后端 API  │  │ 上游后端 API  │  │ 未授权 / 禁用 │
+        │ (公开/已授权) │  │ (待授权)      │  │              │
         └───────────────┘  └──────────────┘  └──────────────┘
 ```
 
@@ -52,7 +67,9 @@
 |---|---|---|---|
 | `meta()` | 返回来源元信息与接入状态 | — | `SourceMeta` |
 | `search(query, type, page)` | 按关键词检索 | 关键词、类型、分页 | `list[MediaItem]` |
-| `detail(item_id)` | 取详情与分集 / 分章 | 来源内外部 ID | `MediaItem` + 列表 |
+| `detail(item_id)` | 取详情 | 来源内外部 ID | `MediaItem` |
+| `episodes(item_id)` | 短剧 / 影视分集（可选实现） | 来源内外部 ID | `list[Episode]` |
+| `chapters(item_id)` | 小说章节（可选实现） | 来源内外部 ID | `list[Chapter]` |
 | `resolve(item_id, episode_id)` | 解析出可播放 / 阅读地址 | 内容 ID、分集 ID | `ResolvedSource` |
 
 **统一约定**：
@@ -61,14 +78,17 @@
 - 鉴权信息（Cookie / 令牌 / 设备标识）只存于服务端会话或加密配置，不写入前端日志与仓库。
 - 所有上游请求走统一 HTTP 客户端：超时、重试、限流、UA / 代理策略、响应压缩。
 - 解析失败、需要登录、地区受限、内容下架等情况，用统一错误码返回，不抛出上游原始堆栈。
+- 适配器以异常表达状态：`PermissionError` → `SOURCE_DISABLED`，`NotImplementedError` → `SOURCE_NOT_READY`，其余 → `UPSTREAM_ERROR`。
 
 ## 5. 来源接入状态
 
 | 适配器 | 对应 APK | 上游状态 | 平台接入策略 |
 |---|---|---|---|
+| `demo_catalog` | — | 仓库自造虚构数据（CC0-1.0） | ACTIVE：本地 JSON，无网络请求，用于验证 `search → detail → resolve` 主链路 |
 | `aquan_duanju` | base_1/2/3 | 开源 Apache-2.0 | 可参考上游实现对接其公开接口；保留上游 NOTICE |
 | `iduanju` | base_5 | 开源 GPL-3.0 | 注意 GPL 传染性约束；与本平台代码的隔离 / 合规方式见 COMPLIANCE.md |
 | `fanqie_novel` | base_6 | 公开源码，许可证待确认 | 接口对接前先完成授权确认；适配器仅留骨架 |
+| `zhenguojian` | base（疑似家族分支） | 主线 GPL-3.0，镜像无 LICENSE | 先复核 GPL 边界与站源授权，再决定是否开放 |
 | `closed_apps` | base（小果影视）、base_4（笔趣阁） | 未公开源码 | **占位禁用**：未授权前不实现检索 / 解析逻辑 |
 
 ## 6. 非功能需求
@@ -78,9 +98,11 @@
 - **可观测**：记录各来源响应耗时、成功率、错误分类；不含个人身份信息。
 - **体积**：源码骨架与文档入库；APK 安装包、下载的音视频 / 书籍文件一律不进仓库（见 `.gitignore`）。
 
-## 7. 建议落地顺序
+## 7. 落地顺序
 
-1. 固化领域模型与适配器接口（本仓库 `platform/` 骨架）。
-2. 选一个许可证清晰的开源来源（如 Apache-2.0 的阿圈短剧）打通 `search → detail → resolve` 主链路。
-3. 接入聚合服务的多源合并与统一错误处理。
-4. 其余来源按授权与许可证状态逐个开放；闭源来源在授权前保持禁用。
+1. ~~固化领域模型与适配器接口~~（已完成，`platform/models.py`、`adapters/base.py`）。
+2. ~~打通 `search → detail → resolve` 主链路并给出统一 API~~（已完成，以 `demo_catalog` 验证，契约见 [API.md](API.md)）。
+3. ~~接入聚合服务的多源合并、去重、统一错误处理与降级~~（已完成，`platform/aggregator.py`、`errors.py`）。
+4. 选许可证清晰的来源（`aquan_duanju`）对接真实公开接口，替换骨架实现。
+5. 其余来源按授权与许可证状态逐个开放；闭源来源在授权前保持禁用。
+6. 补书架 / 进度 / 历史与前端接入。
