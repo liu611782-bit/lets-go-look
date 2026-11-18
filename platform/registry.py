@@ -93,10 +93,3 @@ class Registry:
                 raise BadRequest(f"未知来源：{adapter_id}")
             selected.append(self.get(adapter_id))
         return selected
-
-
-def default_registry() -> Registry:
-    """兼容入口：实际装配在 platform.bootstrap，避免循环导入。"""
-    from platform.bootstrap import default_registry as _registry
-
-    return _registry
