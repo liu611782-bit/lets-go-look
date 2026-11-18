@@ -24,7 +24,7 @@
 
 | APK | 检索情况 | 归类 |
 |---|---|---|
-| base.apk（小果影视 `com.yingshib.xg`） | 按包名、应用名、签名主体检索 GitHub 无匹配仓库；DEX 内仅见 Flutter / FFmpeg 等第三方库链接 | 闭源二进制 |
+| base.apk（小果影视 `com.yingshib.xg`） | 主 Activity 为 `com.guoapp.MainActivity`，与 guoapp / 真果鉴家族同名，技术栈同为 Flutter + FFmpeg；但 `applicationId` 与已核对上游 `com.duanju.duanju_app` 不一致，未逐字匹配到对应分支 | 疑似家族改名 / 二次打包分支，归属待确认；核对到上游前按闭源占位 |
 | base_4.apk（笔趣阁 `com.qsreod.bqgcjb`） | 按包名、应用名、`com.qingsong.read` 等标识检索无匹配仓库；DEX 内含签名绕过工具引用与广告 / 统计 SDK | 闭源 / 疑似重打包 |
 
 ## 版本对应关系
@@ -32,6 +32,13 @@
 - 阿圈短剧：本地三个 APK（1.11.12 / 1.12.4 / 1.12.11）为同一上游的历史版本；接入时应以上游最新主干为准，不要直接复用旧包内资源。
 - i短剧：本地 APK 为 1.5.10-android，上游构建配置显示 1.5.14-android；存在版本差。
 - 番茄小说下载器：本地包版本 `2026.11.13-536`，上游 Releases 持续更新。
+
+## 补充核对：真果鉴家族与同类阅读软件
+
+首轮盘点后补充检索的短剧家族与开源阅读器目录，见 [OPEN_SOURCE_SOURCES.md](OPEN_SOURCE_SOURCES.md)，要点：
+
+- 真果鉴 / 红果鉴（guoapp 家族）主线仓库 `kuoluoss/zhenguojian`，GPL-3.0，包名 `com.duanju.duanju_app`；另有多个无 LICENSE 的社区镜像。
+- 同类开源阅读客户端：Legado（官方源码已清空，下游 fork 可查）、read-cat（GPL-3.0）、ColorTxt（MPL-2.0）、sakura-read、inkwell、Juyue、Night-Reader、HomuraReader 等。
 
 ## 风险与待办
 

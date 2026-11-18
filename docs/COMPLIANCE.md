@@ -7,6 +7,7 @@
 | 阿圈短剧 | [wjsqqj/aquan-duanju](https://github.com/wjsqqj/aquan-duanju) | Apache-2.0 | 保留上游 `LICENSE` 与 NOTICE / 第三方声明；修改处需标注；保留版权与许可声明 |
 | i短剧 | [my-name-is-alan/iDuanJu](https://github.com/my-name-is-alan/iDuanJu) | GPL-3.0 | GPL-3.0 具有传染性：若本平台代码与其构成衍生作品或紧密链接，整体可能需按 GPL-3.0 开放。建议通过独立进程 / 明确接口边界隔离；发布前由法律专业人士复核 |
 | 番茄小说下载器 | [POf-L/Fanqie-novel-Downloader](https://github.com/POf-L/Fanqie-novel-Downloader) | **根目录无 LICENSE** | 在作者书面确认前，按“保留所有权利”处理：不复制其源码 / 资源，不二次分发安装包；仅可参考其公开功能描述 |
+| 真果鉴 / 红果鉴 | [kuoluoss/zhenguojian](https://github.com/kuoluoss/zhenguojian) | GPL-3.0（主线）；家族镜像分支无 LICENSE | 主线 GPL 传染性约束同 i短剧；无 LICENSE 镜像按“保留所有权利”处理；不绕过站源 VIP、登录或地区授权限制 |
 | 小果影视 | 未公开 | 闭源 | 不反编译、不还原源码、不重打包、不提取其接口 / 资源 / 密钥 |
 | 笔趣阁 | 未公开 | 闭源 / 疑似重打包 | 同上；且其包内出现的签名绕过工具（ApkSignatureKillerEx）逻辑**禁止复用** |
 
@@ -19,7 +20,7 @@
 
 ## 3. 内容与数据合规
 
-- 仅接入公开可访问或已获授权的来源；接入前复核上游用户协议、 robots 规则与频次限制。
+- 仅接入公开可访问或已获授权的来源；接入前复核上游用户协议、robots 规则与频次限制。
 - 检索结果、播放 / 阅读地址的版权归原权利人所有；平台应提供内容下架 / 投诉处理通道。
 - 用户个人阅读记录、书架、进度等优先存于本地或用户自己的账号体系，不做未经授权的跨源聚合画像。
 - 上游接口变更、限流或下架时，适配器应能优雅降级，不强行突破限制。
