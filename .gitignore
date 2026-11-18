@@ -41,3 +41,9 @@ venv/
 # 构建产物
 /dist/
 /out/
+/android/build/
+/android/keys/
+/android/assets/demo_media/
+/android/media/
+/android/assets/web/
+/android/assets/data/
