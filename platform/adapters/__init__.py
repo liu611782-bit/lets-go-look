@@ -11,6 +11,7 @@ from .base import SourceAdapter
 from .aquan_duanju import AquanDuanjuAdapter
 from .iduanju import IDuanjuAdapter
 from .fanqie_novel import FanqieNovelAdapter
+from .zhenguojian import ZhenguojianAdapter
 from .closed_apps import xiaoguo_video, biquge_reader
 
 AdapterFactory = Callable[[], SourceAdapter]
@@ -19,6 +20,7 @@ ADAPTERS: Dict[str, AdapterFactory] = {
     AquanDuanjuAdapter.ADAPTER_ID: AquanDuanjuAdapter,
     IDuanjuAdapter.ADAPTER_ID: IDuanjuAdapter,
     FanqieNovelAdapter.ADAPTER_ID: FanqieNovelAdapter,
+    ZhenguojianAdapter.ADAPTER_ID: ZhenguojianAdapter,
     "xiaoguo_video": xiaoguo_video,
     "biquge_reader": biquge_reader,
 }

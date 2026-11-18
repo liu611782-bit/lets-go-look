@@ -13,7 +13,7 @@
 
 | # | 本地文件 | 应用名 | 包名 | 版本 | 压缩体积 | 技术栈 | 上游仓库 | 开源状态 |
 |---|---|---|---|---|---|---|---|---|
-| 1 | base.apk | 小果影视 | `com.yingshib.xg` | 2.0.0 (2112) | 33.66 MB | Flutter + FFmpeg + `libduanju_core.so` | 未检索到公开源码仓库 | 闭源二进制 |
+| 1 | base.apk | 小果影视 | `com.yingshib.xg` | 2.0.0 (2112) | 33.66 MB | Flutter + FFmpeg + `libduanju_core.so` | 疑似 guoapp / 真果鉴家族重打包分支，未逐字匹配 | 归属待确认，按闭源占位 |
 | 2 | base_1.apk | 阿圈短剧 | `com.aquan.duanju` | 1.11.12 (2074) | 38.59 MB | Flutter/Dart + libmpv + FFmpeg + QuickJS | [wjsqqj/aquan-duanju](https://github.com/wjsqqj/aquan-duanju) | 开源（Apache-2.0，旧版本） |
 | 3 | base_2.apk | 阿圈短剧 | `com.aquan.duanju` | 1.12.4 (2082) | 40.26 MB | 同上 | [wjsqqj/aquan-duanju](https://github.com/wjsqqj/aquan-duanju) | 开源（Apache-2.0，中间版本） |
 | 4 | base_3.apk | 阿圈短剧 | `com.aquan.duanju` | 1.12.11 (2092) | 42.67 MB | 同上 | [wjsqqj/aquan-duanju](https://github.com/wjsqqj/aquan-duanju) | 开源（Apache-2.0，新版本） |
@@ -30,6 +30,10 @@
 
 > 结论：7 个安装包作为压缩包整体小于 300MB；一旦全部解压展开，体积超过 300MB。明细见 [docs/INVENTORY.md](docs/INVENTORY.md)。
 
+## 补充：同类开源来源
+
+真果鉴 / 红果鉴家族（短剧多站源客户端）与其他开源小说 / 漫画阅读器的仓库、技术栈与许可证目录，见 [docs/OPEN_SOURCE_SOURCES.md](docs/OPEN_SOURCE_SOURCES.md)。
+
 ## 目录结构
 
 ```
@@ -39,7 +43,8 @@ lets-go-look/
 │   ├── INVENTORY.md              # 逐包元数据、权限、原生库与体积明细
 │   ├── SOURCE_AUDIT.md           # 上游开源仓库核对方法、证据与结论
 │   ├── ARCHITECTURE.md           # 统一聚合平台架构与适配器契约
-│   └── COMPLIANCE.md             # 许可证、再分发与内容版权边界
+│   ├── COMPLIANCE.md             # 许可证、再分发与内容版权边界
+│   └── OPEN_SOURCE_SOURCES.md    # 真果鉴家族与同类开源阅读软件目录
 └── platform/
     ├── README.md                 # 骨架说明与下一步
     ├── models.py                 # 统一领域数据模型
@@ -48,6 +53,7 @@ lets-go-look/
         ├── aquan_duanju.py       # 阿圈短剧适配器（Apache-2.0 上游）
         ├── iduanju.py            # i短剧适配器（GPL-3.0 上游）
         ├── fanqie_novel.py       # 番茄小说下载器适配器（授权待确认）
+        ├── zhenguojian.py        # 真果鉴适配器（GPL-3.0 主线，骨架）
         └── closed_apps.py        # 闭源应用占位（未授权，禁止逆向接入）
 ```
 
