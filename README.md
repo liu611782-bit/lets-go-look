@@ -1,12 +1,13 @@
 # lets-go-look
 
-多源影视 / 短剧 / 小说聚合平台：对一批 Android 安装包（APK）做资产盘点、上游开源源码核对，并给出统一聚合平台的适配器骨架。
+多源影视 / 短剧 / 小说聚合平台：对一批 Android 安装包（APK）做资产盘点、上游开源源码核对，并实现一个可本地运行的统一聚合服务（领域模型 + 来源适配器 + HTTP API）。
 
 > **仓库边界**
 >
 > - 本仓库**不包含**任何 APK 安装包本体（7 个 APK 压缩后合计约 221.67 MB）。
 > - 本仓库**不包含**对闭源应用的反编译代码、smali/dex 还原产物或从二进制中提取的专有源码。
-> - 仅保留：清单元数据、公开可查的上游仓库链接、许可证核对记录、平台架构文档与接口骨架。
+> - 仓库内唯一的内容数据 `platform/data/demo_catalog.json` 为**自行编写的虚构演示条目**（CC0-1.0），不含真实作品或受版权保护的内容。
+> - 仅保留：清单元数据、公开可查的上游仓库链接、许可证核对记录、平台架构文档、接口契约与骨架代码。
 > - 接入某个上游时，只能使用其公开 / 已授权的后端接口；闭源应用在取得授权前不得逆向提取接口或资源。
 
 ## 资产盘点速览
@@ -30,6 +31,17 @@
 
 > 结论：7 个安装包作为压缩包整体小于 300MB；一旦全部解压展开，体积超过 300MB。明细见 [docs/INVENTORY.md](docs/INVENTORY.md)。
 
+## 本地运行
+
+```bash
+PYTHONPATH=. python3 -m platform.cli health            # 来源接入状态
+PYTHONPATH=. python3 -m platform.cli search 雾         # 多源检索（合并去重）
+PYTHONPATH=. python3 -m platform.cli serve --port 8080 # 启动统一 HTTP API
+PYTHONPATH=. python3 -m unittest discover -s tests -v  # 22 项测试
+```
+
+仅依赖 Python 标准库。`demo_catalog` 来源是仓库自造虚构数据（CC0-1.0），用于跑通全链路；真实来源按授权状态逐步开放。接口见 [docs/API.md](docs/API.md)。
+
 ## 补充：同类开源来源
 
 真果鉴 / 红果鉴家族（短剧多站源客户端）与其他开源小说 / 漫画阅读器的仓库、技术栈与许可证目录，见 [docs/OPEN_SOURCE_SOURCES.md](docs/OPEN_SOURCE_SOURCES.md)。
@@ -43,18 +55,30 @@ lets-go-look/
 │   ├── INVENTORY.md              # 逐包元数据、权限、原生库与体积明细
 │   ├── SOURCE_AUDIT.md           # 上游开源仓库核对方法、证据与结论
 │   ├── ARCHITECTURE.md           # 统一聚合平台架构与适配器契约
+│   ├── API.md                    # 统一聚合 API 契约与错误码
 │   ├── COMPLIANCE.md             # 许可证、再分发与内容版权边界
 │   └── OPEN_SOURCE_SOURCES.md    # 真果鉴家族与同类开源阅读软件目录
-└── platform/
-    ├── README.md                 # 骨架说明与下一步
-    ├── models.py                 # 统一领域数据模型
-    └── adapters/
-        ├── base.py               # 适配器抽象接口
-        ├── aquan_duanju.py       # 阿圈短剧适配器（Apache-2.0 上游）
-        ├── iduanju.py            # i短剧适配器（GPL-3.0 上游）
-        ├── fanqie_novel.py       # 番茄小说下载器适配器（授权待确认）
-        ├── zhenguojian.py        # 真果鉴适配器（GPL-3.0 主线，骨架）
-        └── closed_apps.py        # 闭源应用占位（未授权，禁止逆向接入）
+├── platform/
+│   ├── README.md                 # 聚合服务说明与下一步
+│   ├── models.py                 # 统一领域数据模型
+│   ├── errors.py                 # 统一错误码
+│   ├── registry.py               # 适配器注册表
+│   ├── aggregator.py             # 多源合并 / 去重 / 排序 / 降级
+│   ├── serialization.py          # 领域模型 → JSON
+│   ├── server.py                 # HTTP API（标准库）
+│   ├── cli.py                    # 命令行入口
+│   ├── data/
+│   │   └── demo_catalog.json     # 自造演示数据（CC0-1.0）
+│   └── adapters/
+│       ├── base.py               # 适配器抽象接口
+│       ├── demo_catalog.py       # 演示目录适配器（ACTIVE）
+│       ├── aquan_duanju.py       # 阿圈短剧适配器（Apache-2.0 上游）
+│       ├── iduanju.py            # i短剧适配器（GPL-3.0 上游）
+│       ├── fanqie_novel.py       # 番茄小说下载器适配器（授权待确认）
+│       ├── zhenguojian.py        # 真果鉴适配器（GPL-3.0 主线，骨架）
+│       └── closed_apps.py        # 闭源应用占位（未授权，禁止逆向接入）
+└── tests/
+    └── test_platform.py          # 注册表 / 聚合 / HTTP 接口测试
 ```
 
 ## 重要概念澄清
