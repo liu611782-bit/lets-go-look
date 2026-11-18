@@ -34,13 +34,27 @@
 ## 本地运行
 
 ```bash
-PYTHONPATH=. python3 -m platform.cli health            # 来源接入状态
-PYTHONPATH=. python3 -m platform.cli search 雾         # 多源检索（合并去重）
-PYTHONPATH=. python3 -m platform.cli serve --port 8080 # 启动统一 HTTP API
-PYTHONPATH=. python3 -m unittest discover -s tests -v  # 22 项测试
+PYTHONPATH=. python3 -m platform.cli serve --port 8080   # 启动服务与界面
+# 打开 http://127.0.0.1:8080 —— 搜索 / 详情 / 解析的可视化界面
+
+PYTHONPATH=. python3 -m platform.cli health              # 来源接入状态
+PYTHONPATH=. python3 -m platform.cli search 雾           # 多源检索（合并去重）
+PYTHONPATH=. python3 -m unittest discover -s tests -v    # 41 项测试
 ```
 
 仅依赖 Python 标准库。`demo_catalog` 来源是仓库自造虚构数据（CC0-1.0），用于跑通全链路；真实来源按授权状态逐步开放。接口见 [docs/API.md](docs/API.md)。
+
+## 接入一个已授权的来源
+
+不需要为新来源写 Python 代码：把 `platform/config/sources.example.json` 复制到仓库外，填好**已授权**的接口地址与字段映射，用环境变量指过去即可。
+
+```bash
+cp platform/config/sources.example.json ~/my-sources.json
+# 编辑 ~/my-sources.json：替换 base_url、填写端点与字段映射、把 enabled 改为 true
+LGL_SOURCES_CONFIG=~/my-sources.json PYTHONPATH=. python3 -m platform.cli sources
+```
+
+令牌不写进配置：用 `auth_env` / `headers_env` 指向环境变量名，运行时注入。
 
 ## 补充：同类开源来源
 
@@ -63,22 +77,31 @@ lets-go-look/
 │   ├── models.py                 # 统一领域数据模型
 │   ├── errors.py                 # 统一错误码
 │   ├── registry.py               # 适配器注册表
+│   ├── bootstrap.py              # 平台装配：内置源 + 配置化来源
 │   ├── aggregator.py             # 多源合并 / 去重 / 排序 / 降级
 │   ├── serialization.py          # 领域模型 → JSON
-│   ├── server.py                 # HTTP API（标准库）
+│   ├── config.py                 # 来源配置加载（凭证只放环境变量名）
+│   ├── http_client.py            # 统一 HTTP 客户端（域名白名单 / 重试 / 限流）
+│   ├── server.py                 # HTTP API + 界面路由
 │   ├── cli.py                    # 命令行入口
+│   ├── config/
+│   │   └── sources.example.json  # 接入配置占位示例（默认为关闭）
 │   ├── data/
 │   │   └── demo_catalog.json     # 自造演示数据（CC0-1.0）
 │   └── adapters/
 │       ├── base.py               # 适配器抽象接口
 │       ├── demo_catalog.py       # 演示目录适配器（ACTIVE）
+│       ├── http_source.py        # 配置驱动的通用 HTTP 适配器
 │       ├── aquan_duanju.py       # 阿圈短剧适配器（Apache-2.0 上游）
 │       ├── iduanju.py            # i短剧适配器（GPL-3.0 上游）
 │       ├── fanqie_novel.py       # 番茄小说下载器适配器（授权待确认）
 │       ├── zhenguojian.py        # 真果鉴适配器（GPL-3.0 主线，骨架）
 │       └── closed_apps.py        # 闭源应用占位（未授权，禁止逆向接入）
+├── web/
+│   └── index.html                # 搜索 / 详情 / 解析界面（无第三方依赖）
 └── tests/
-    └── test_platform.py          # 注册表 / 聚合 / HTTP 接口测试
+    ├── test_platform.py          # 注册表 / 聚合 / HTTP 接口测试
+    └── test_config_and_http.py   # 配置加载 / HTTP 客户端 / 配置化适配器 / 页面测试
 ```
 
 ## 重要概念澄清

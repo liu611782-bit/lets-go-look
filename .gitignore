@@ -23,6 +23,8 @@
 *.jks
 keystore/
 *.pem
+# 真实来源配置：含授权接口地址与运行时开关，一律不入库（示例见 sources.example.json）
+/platform/config/sources.json
 
 # 日志与诊断
 *.log
